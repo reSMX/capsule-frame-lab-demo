@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Локальная демонстрация анализа отдельных кадров капсульной эндоскопии моделью EfficientNet-B0.">
   <title>Capsule Frame Lab — локальный анализ кадров</title>
-  <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}?v=20260904-unlimited-fix">
 </head>
 <body
-  data-max-image-mb="{{ max_image_mb }}"
-  data-max-video-mb="{{ max_video_mb }}"
-  data-max-video-seconds="{{ max_video_seconds }}"
+  {% if max_image_mb is not none %}data-max-image-mb="{{ max_image_mb }}"{% endif %}
+  {% if max_video_mb is not none %}data-max-video-mb="{{ max_video_mb }}"{% endif %}
+  {% if max_video_seconds is not none %}data-max-video-seconds="{{ max_video_seconds }}"{% endif %}
   data-sample-fps="{{ sample_fps }}"
-  data-max-video-frames="{{ max_video_frames }}"
+  {% if max_video_frames is not none %}data-max-video-frames="{{ max_video_frames }}"{% endif %}
 >
   <a class="skip-link" href="#main">К основному содержанию</a>
 
@@ -227,6 +227,6 @@
     <p>Только для исследовательской демонстрации</p>
   </footer>
 
-  <script src="{{ url_for('static', path='/app.js') }}" defer></script>
+  <script src="{{ url_for('static', path='/app.js') }}?v=20260904-unlimited-fix" defer></script>
 </body>
 </html>

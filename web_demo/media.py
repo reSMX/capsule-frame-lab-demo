@@ -25,7 +25,7 @@ class MediaValidationError(ValueError):
     """A user-provided media file failed a bounded validation step."""
 
 
-def decode_image(data: bytes, max_pixels: int) -> Image.Image:
+def decode_image(data: bytes, max_pixels: int | None) -> Image.Image:
     if not data:
         raise MediaValidationError("Файл пуст. Выберите изображение JPEG, PNG или WebP.")
     try:
@@ -36,7 +36,7 @@ def decode_image(data: bytes, max_pixels: int) -> Image.Image:
                 raise MediaValidationError("Поддерживаются только изображения JPEG, PNG и WebP.")
             if width <= 0 or height <= 0:
                 raise MediaValidationError("Изображение имеет некорректный размер.")
-            if max_pixels > 0 and width * height > max_pixels:
+            if max_pixels is not None and width * height > max_pixels:
                 raise MediaValidationError("Изображение превышает допустимое число пикселей.")
             probe.verify()
         with Image.open(io.BytesIO(data)) as source:
@@ -83,14 +83,14 @@ def analyze_video(path: Path, service: InferenceService, settings: Settings) -> 
         duration = frame_count / fps
         if not math.isfinite(duration) or duration <= 0:
             raise MediaValidationError("Видео не содержит доступных кадров.")
-        if settings.max_video_seconds > 0 and duration > settings.max_video_seconds:
+        if settings.max_video_seconds is not None and duration > settings.max_video_seconds:
             raise MediaValidationError(
                 f"Видео длиннее допустимых {settings.max_video_seconds:g} секунд."
             )
 
         wanted = max(1, math.ceil(duration * settings.video_sample_fps))
         sample_count = min(wanted, frame_count)
-        if settings.max_video_frames > 0:
+        if settings.max_video_frames is not None:
             sample_count = min(sample_count, settings.max_video_frames)
         end_time = max(0.0, (frame_count - 1) / fps)
         if sample_count == 1:

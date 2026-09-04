@@ -32,7 +32,7 @@ class ServiceProtocol(Protocol):
     def model_info(self) -> dict[str, Any]: ...
 
 
-async def _read_upload(upload: UploadFile, limit: int) -> bytes:
+async def _read_upload(upload: UploadFile, limit: int | None) -> bytes:
     chunks: list[bytes] = []
     total = 0
     while True:
@@ -40,7 +40,7 @@ async def _read_upload(upload: UploadFile, limit: int) -> bytes:
         if not chunk:
             break
         total += len(chunk)
-        if limit > 0 and total > limit:
+        if limit is not None and total > limit:
             raise HTTPException(status_code=413, detail="Файл превышает допустимый размер.")
         chunks.append(chunk)
     if total == 0:
@@ -48,7 +48,7 @@ async def _read_upload(upload: UploadFile, limit: int) -> bytes:
     return b"".join(chunks)
 
 
-async def _save_upload(upload: UploadFile, destination: Path, limit: int) -> int:
+async def _save_upload(upload: UploadFile, destination: Path, limit: int | None) -> int:
     total = 0
     with destination.open("wb") as stream:
         while True:
@@ -56,7 +56,7 @@ async def _save_upload(upload: UploadFile, destination: Path, limit: int) -> int
             if not chunk:
                 break
             total += len(chunk)
-            if limit > 0 and total > limit:
+            if limit is not None and total > limit:
                 raise HTTPException(status_code=413, detail="Видео превышает допустимый размер.")
             stream.write(chunk)
     if total == 0:
@@ -86,15 +86,34 @@ def create_app(settings: Settings | None = None, service: ServiceProtocol | None
     application.state.settings = settings
     application.mount("/static", StaticFiles(directory=str(MODULE_DIR / "static")), name="static")
 
+    @application.middleware("http")
+    async def disable_local_asset_cache(request: Request, call_next):
+        response = await call_next(request)
+        if request.url.path == "/" or request.url.path.startswith("/static/"):
+            response.headers["Cache-Control"] = "no-store"
+        return response
+
     @application.get("/", response_class=HTMLResponse, include_in_schema=False)
     async def index(request: Request) -> HTMLResponse:
         return templates.TemplateResponse(
             request=request,
             name="index.html",
             context={
-                "max_image_mb": settings.max_image_bytes // (1024 * 1024),
-                "max_image_megapixels": settings.max_image_pixels // 1_000_000,
-                "max_video_mb": settings.max_video_bytes // (1024 * 1024),
+                "max_image_mb": (
+                    settings.max_image_bytes // (1024 * 1024)
+                    if settings.max_image_bytes is not None
+                    else None
+                ),
+                "max_image_megapixels": (
+                    settings.max_image_pixels // 1_000_000
+                    if settings.max_image_pixels is not None
+                    else None
+                ),
+                "max_video_mb": (
+                    settings.max_video_bytes // (1024 * 1024)
+                    if settings.max_video_bytes is not None
+                    else None
+                ),
                 "max_video_seconds": settings.max_video_seconds,
                 "sample_fps": settings.video_sample_fps,
                 "max_video_frames": settings.max_video_frames,

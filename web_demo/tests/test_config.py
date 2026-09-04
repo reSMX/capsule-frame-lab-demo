@@ -15,8 +15,8 @@ def test_file_limits_are_disabled_by_default(monkeypatch) -> None:
 
     settings = Settings.from_env()
 
-    assert settings.max_image_bytes == 0
-    assert settings.max_image_pixels == 0
-    assert settings.max_video_bytes == 0
-    assert settings.max_video_seconds == 0
-    assert settings.max_video_frames == 0
+    assert settings.max_image_bytes is None
+    assert settings.max_image_pixels is None
+    assert settings.max_video_bytes is None
+    assert settings.max_video_seconds is None
+    assert settings.max_video_frames is None

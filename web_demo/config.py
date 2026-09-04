@@ -36,29 +36,29 @@ def _positive_float(name: str, default: float) -> float:
     return value
 
 
-def _non_negative_int(name: str, default: int) -> int:
+def _optional_limit_int(name: str) -> int | None:
     raw = os.getenv(name)
-    if raw is None:
-        return default
+    if raw is None or raw.strip().lower() in {"", "0", "none", "unlimited", "off"}:
+        return None
     try:
         value = int(raw)
     except ValueError as exc:
-        raise ValueError(f"{name} must be an integer") from exc
-    if value < 0:
-        raise ValueError(f"{name} must be zero or greater")
+        raise ValueError(f"{name} must be a positive integer or 'unlimited'") from exc
+    if value <= 0:
+        raise ValueError(f"{name} must be greater than zero or 'unlimited'")
     return value
 
 
-def _non_negative_float(name: str, default: float) -> float:
+def _optional_limit_float(name: str) -> float | None:
     raw = os.getenv(name)
-    if raw is None:
-        return default
+    if raw is None or raw.strip().lower() in {"", "0", "none", "unlimited", "off"}:
+        return None
     try:
         value = float(raw)
     except ValueError as exc:
-        raise ValueError(f"{name} must be a number") from exc
-    if value < 0:
-        raise ValueError(f"{name} must be zero or greater")
+        raise ValueError(f"{name} must be a positive number or 'unlimited'") from exc
+    if value <= 0:
+        raise ValueError(f"{name} must be greater than zero or 'unlimited'")
     return value
 
 
@@ -67,12 +67,12 @@ class Settings:
     model_path: Path
     report_path: Path
     device: str
-    max_image_bytes: int
-    max_image_pixels: int
-    max_video_bytes: int
-    max_video_seconds: float
+    max_image_bytes: int | None
+    max_image_pixels: int | None
+    max_video_bytes: int | None
+    max_video_seconds: float | None
     video_sample_fps: float
-    max_video_frames: int
+    max_video_frames: int | None
     inference_batch_size: int
     max_preview_frames: int
 
@@ -97,12 +97,20 @@ class Settings:
             model_path=model_path.resolve(),
             report_path=report_path.resolve(),
             device=device,
-            max_image_bytes=_non_negative_int("MAX_IMAGE_MB", 0) * 1024 * 1024,
-            max_image_pixels=_non_negative_int("MAX_IMAGE_MEGAPIXELS", 0) * 1_000_000,
-            max_video_bytes=_non_negative_int("MAX_VIDEO_MB", 0) * 1024 * 1024,
-            max_video_seconds=_non_negative_float("MAX_VIDEO_SECONDS", 0.0),
+            max_image_bytes=(
+                value * 1024 * 1024 if (value := _optional_limit_int("MAX_IMAGE_MB")) else None
+            ),
+            max_image_pixels=(
+                value * 1_000_000
+                if (value := _optional_limit_int("MAX_IMAGE_MEGAPIXELS"))
+                else None
+            ),
+            max_video_bytes=(
+                value * 1024 * 1024 if (value := _optional_limit_int("MAX_VIDEO_MB")) else None
+            ),
+            max_video_seconds=_optional_limit_float("MAX_VIDEO_SECONDS"),
             video_sample_fps=_positive_float("VIDEO_SAMPLE_FPS", 1.0),
-            max_video_frames=_non_negative_int("MAX_VIDEO_FRAMES", 0),
+            max_video_frames=_optional_limit_int("MAX_VIDEO_FRAMES"),
             inference_batch_size=_positive_int("INFERENCE_BATCH_SIZE", 16),
             max_preview_frames=min(_positive_int("MAX_PREVIEW_FRAMES", 12), 12),
         )

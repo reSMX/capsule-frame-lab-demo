@@ -2,10 +2,11 @@
   "use strict";
 
   const body = document.body;
+  const optionalNumber = (value) => value == null || value === "" ? null : Number(value);
   const config = {
-    maxImageMb: Number(body.dataset.maxImageMb),
-    maxVideoMb: Number(body.dataset.maxVideoMb),
-    maxVideoSeconds: Number(body.dataset.maxVideoSeconds),
+    maxImageMb: optionalNumber(body.dataset.maxImageMb),
+    maxVideoMb: optionalNumber(body.dataset.maxVideoMb),
+    maxVideoSeconds: optionalNumber(body.dataset.maxVideoSeconds),
     sampleFps: Number(body.dataset.sampleFps),
   };
   const elements = Object.fromEntries([
@@ -53,8 +54,8 @@
     elements.fileInput.accept = isImage ? "image/jpeg,image/png,image/webp" : "video/mp4";
     elements.dropTitle.textContent = isImage ? "Перетащите изображение сюда" : "Перетащите короткий MP4 сюда";
     elements.fileRules.textContent = isImage
-      ? `JPEG, PNG или WebP · ${config.maxImageMb > 0 ? `до ${config.maxImageMb} МБ` : "без ограничения размера и разрешения"}`
-      : `MP4 · ${config.maxVideoMb > 0 ? `до ${config.maxVideoMb} МБ` : "без ограничения размера"} · ${config.maxVideoSeconds > 0 ? `до ${config.maxVideoSeconds} с` : "без ограничения длительности"} · ${config.sampleFps} кадр/с`;
+      ? `JPEG, PNG или WebP · ${config.maxImageMb != null ? `до ${config.maxImageMb} МБ` : "без ограничения размера и разрешения"}`
+      : `MP4 · ${config.maxVideoMb != null ? `до ${config.maxVideoMb} МБ` : "без ограничения размера"} · ${config.maxVideoSeconds != null ? `до ${config.maxVideoSeconds} с` : "без ограничения длительности"} · ${config.sampleFps} кадр/с`;
   }
 
   function setError(message) {
@@ -70,9 +71,10 @@
 
   function validateSelection(file) {
     if (!file) return "Файл не выбран.";
-    const maxBytes = (mode === "image" ? config.maxImageMb : config.maxVideoMb) * 1024 * 1024;
+    const maxMb = mode === "image" ? config.maxImageMb : config.maxVideoMb;
+    const maxBytes = maxMb == null ? null : maxMb * 1024 * 1024;
     if (file.size === 0) return "Файл пуст.";
-    if (maxBytes > 0 && file.size > maxBytes) return `Файл больше допустимых ${mode === "image" ? config.maxImageMb : config.maxVideoMb} МБ.`;
+    if (maxBytes != null && file.size > maxBytes) return `Файл больше допустимых ${maxMb} МБ.`;
     if (mode === "image" && !["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
       return "Выберите JPEG, PNG или WebP.";
     }
