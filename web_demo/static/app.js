@@ -53,8 +53,8 @@
     elements.fileInput.accept = isImage ? "image/jpeg,image/png,image/webp" : "video/mp4";
     elements.dropTitle.textContent = isImage ? "Перетащите изображение сюда" : "Перетащите короткий MP4 сюда";
     elements.fileRules.textContent = isImage
-      ? `JPEG, PNG или WebP · до ${config.maxImageMb} МБ · до 40 Мп`
-      : `MP4 · до ${config.maxVideoMb} МБ · до ${config.maxVideoSeconds} с · ${config.sampleFps} кадр/с`;
+      ? `JPEG, PNG или WebP · ${config.maxImageMb > 0 ? `до ${config.maxImageMb} МБ` : "без ограничения размера и разрешения"}`
+      : `MP4 · ${config.maxVideoMb > 0 ? `до ${config.maxVideoMb} МБ` : "без ограничения размера"} · ${config.maxVideoSeconds > 0 ? `до ${config.maxVideoSeconds} с` : "без ограничения длительности"} · ${config.sampleFps} кадр/с`;
   }
 
   function setError(message) {
@@ -72,7 +72,7 @@
     if (!file) return "Файл не выбран.";
     const maxBytes = (mode === "image" ? config.maxImageMb : config.maxVideoMb) * 1024 * 1024;
     if (file.size === 0) return "Файл пуст.";
-    if (file.size > maxBytes) return `Файл больше допустимых ${mode === "image" ? config.maxImageMb : config.maxVideoMb} МБ.`;
+    if (maxBytes > 0 && file.size > maxBytes) return `Файл больше допустимых ${mode === "image" ? config.maxImageMb : config.maxVideoMb} МБ.`;
     if (mode === "image" && !["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
       return "Выберите JPEG, PNG или WebP.";
     }

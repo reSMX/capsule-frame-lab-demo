@@ -40,7 +40,7 @@ async def _read_upload(upload: UploadFile, limit: int) -> bytes:
         if not chunk:
             break
         total += len(chunk)
-        if total > limit:
+        if limit > 0 and total > limit:
             raise HTTPException(status_code=413, detail="Файл превышает допустимый размер.")
         chunks.append(chunk)
     if total == 0:
@@ -56,7 +56,7 @@ async def _save_upload(upload: UploadFile, destination: Path, limit: int) -> int
             if not chunk:
                 break
             total += len(chunk)
-            if total > limit:
+            if limit > 0 and total > limit:
                 raise HTTPException(status_code=413, detail="Видео превышает допустимый размер.")
             stream.write(chunk)
     if total == 0:
@@ -93,6 +93,7 @@ def create_app(settings: Settings | None = None, service: ServiceProtocol | None
             name="index.html",
             context={
                 "max_image_mb": settings.max_image_bytes // (1024 * 1024),
+                "max_image_megapixels": settings.max_image_pixels // 1_000_000,
                 "max_video_mb": settings.max_video_bytes // (1024 * 1024),
                 "max_video_seconds": settings.max_video_seconds,
                 "sample_fps": settings.video_sample_fps,

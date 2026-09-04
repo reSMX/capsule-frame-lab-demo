@@ -18,6 +18,7 @@ from .labels import describe_label
 
 
 ALLOWED_IMAGE_FORMATS = {"JPEG", "PNG", "WEBP"}
+Image.MAX_IMAGE_PIXELS = None
 
 
 class MediaValidationError(ValueError):
@@ -33,7 +34,9 @@ def decode_image(data: bytes, max_pixels: int) -> Image.Image:
             width, height = probe.size
             if image_format not in ALLOWED_IMAGE_FORMATS:
                 raise MediaValidationError("Поддерживаются только изображения JPEG, PNG и WebP.")
-            if width <= 0 or height <= 0 or width * height > max_pixels:
+            if width <= 0 or height <= 0:
+                raise MediaValidationError("Изображение имеет некорректный размер.")
+            if max_pixels > 0 and width * height > max_pixels:
                 raise MediaValidationError("Изображение превышает допустимое число пикселей.")
             probe.verify()
         with Image.open(io.BytesIO(data)) as source:
@@ -80,13 +83,15 @@ def analyze_video(path: Path, service: InferenceService, settings: Settings) -> 
         duration = frame_count / fps
         if not math.isfinite(duration) or duration <= 0:
             raise MediaValidationError("Видео не содержит доступных кадров.")
-        if duration > settings.max_video_seconds:
+        if settings.max_video_seconds > 0 and duration > settings.max_video_seconds:
             raise MediaValidationError(
                 f"Видео длиннее допустимых {settings.max_video_seconds:g} секунд."
             )
 
         wanted = max(1, math.ceil(duration * settings.video_sample_fps))
-        sample_count = min(settings.max_video_frames, wanted, frame_count)
+        sample_count = min(wanted, frame_count)
+        if settings.max_video_frames > 0:
+            sample_count = min(sample_count, settings.max_video_frames)
         end_time = max(0.0, (frame_count - 1) / fps)
         if sample_count == 1:
             timestamps = [0.0]

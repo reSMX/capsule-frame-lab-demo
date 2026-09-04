@@ -69,7 +69,11 @@
               <span>или</span>
               <button class="text-button" id="chooseButton" type="button">выберите файл</button>
             </div>
-            <p id="fileRules">JPEG, PNG или WebP · до {{ max_image_mb }} МБ · до 40 Мп</p>
+            <p id="fileRules">
+              JPEG, PNG или WebP ·
+              {% if max_image_mb %}до {{ max_image_mb }} МБ{% else %}без ограничения размера{% endif %} ·
+              {% if max_image_megapixels %}до {{ max_image_megapixels }} Мп{% else %}без ограничения разрешения{% endif %}
+            </p>
           </div>
 
           <div class="file-preview" id="filePreview" hidden>

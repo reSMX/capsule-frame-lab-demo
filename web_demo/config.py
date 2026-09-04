@@ -36,6 +36,32 @@ def _positive_float(name: str, default: float) -> float:
     return value
 
 
+def _non_negative_int(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise ValueError(f"{name} must be an integer") from exc
+    if value < 0:
+        raise ValueError(f"{name} must be zero or greater")
+    return value
+
+
+def _non_negative_float(name: str, default: float) -> float:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        value = float(raw)
+    except ValueError as exc:
+        raise ValueError(f"{name} must be a number") from exc
+    if value < 0:
+        raise ValueError(f"{name} must be zero or greater")
+    return value
+
+
 @dataclass(frozen=True, slots=True)
 class Settings:
     model_path: Path
@@ -71,12 +97,12 @@ class Settings:
             model_path=model_path.resolve(),
             report_path=report_path.resolve(),
             device=device,
-            max_image_bytes=_positive_int("MAX_IMAGE_MB", 15) * 1024 * 1024,
-            max_image_pixels=_positive_int("MAX_IMAGE_MEGAPIXELS", 40) * 1_000_000,
-            max_video_bytes=_positive_int("MAX_VIDEO_MB", 300) * 1024 * 1024,
-            max_video_seconds=_positive_float("MAX_VIDEO_SECONDS", 120.0),
+            max_image_bytes=_non_negative_int("MAX_IMAGE_MB", 0) * 1024 * 1024,
+            max_image_pixels=_non_negative_int("MAX_IMAGE_MEGAPIXELS", 0) * 1_000_000,
+            max_video_bytes=_non_negative_int("MAX_VIDEO_MB", 0) * 1024 * 1024,
+            max_video_seconds=_non_negative_float("MAX_VIDEO_SECONDS", 0.0),
             video_sample_fps=_positive_float("VIDEO_SAMPLE_FPS", 1.0),
-            max_video_frames=_positive_int("MAX_VIDEO_FRAMES", 120),
+            max_video_frames=_non_negative_int("MAX_VIDEO_FRAMES", 0),
             inference_batch_size=_positive_int("INFERENCE_BATCH_SIZE", 16),
             max_preview_frames=min(_positive_int("MAX_PREVIEW_FRAMES", 12), 12),
         )
