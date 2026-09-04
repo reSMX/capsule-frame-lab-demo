@@ -1,0 +1,9 @@
+# Install these into the existing training environment that already contains
+# torch, torchvision and Pillow. The web service does not alter training deps.
+fastapi==0.116.1
+uvicorn==0.35.0
+Jinja2==3.1.6
+python-multipart==0.0.20
+opencv-python-headless==4.14.0.94
+httpx==0.28.1
+pytest==8.4.1

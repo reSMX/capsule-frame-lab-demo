@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Локальная демонстрация анализа отдельных кадров капсульной эндоскопии моделью EfficientNet-B0.">
+  <title>Capsule Frame Lab — локальный анализ кадров</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
+</head>
+<body
+  data-max-image-mb="{{ max_image_mb }}"
+  data-max-video-mb="{{ max_video_mb }}"
+  data-max-video-seconds="{{ max_video_seconds }}"
+  data-sample-fps="{{ sample_fps }}"
+  data-max-video-frames="{{ max_video_frames }}"
+>
+  <a class="skip-link" href="#main">К основному содержанию</a>
+
+  <div class="research-notice" role="note">
+    <span class="notice-dot" aria-hidden="true"></span>
+    <strong>Исследовательский прототип.</strong>
+    Результат не является диагнозом и не предназначен для принятия медицинских решений без проверки врачом.
+  </div>
+
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="Capsule Frame Lab — главная">
+      <span class="brand-mark" aria-hidden="true"><i></i></span>
+      <span>Capsule Frame Lab</span>
+    </a>
+    <div class="runtime-pill" id="runtimePill" aria-live="polite">
+      <span class="runtime-light" aria-hidden="true"></span>
+      <span id="runtimeText">Проверяем модель…</span>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" aria-labelledby="pageTitle">
+      <div class="hero-copy">
+        <p class="eyebrow"><span>14 классов</span><span>EfficientNet‑B0</span><span>локально</span></p>
+        <h1 id="pageTitle">Демонстрация анализа кадров капсульной эндоскопии</h1>
+        <p class="hero-lead">Загрузите один кадр или короткий MP4. Модель покажет свои оценки без отправки файла во внешние сервисы.</p>
+      </div>
+      <div class="hero-aside" aria-hidden="true">
+        <span class="orbit orbit-one"></span>
+        <span class="orbit orbit-two"></span>
+        <span class="core"><i></i></span>
+      </div>
+    </section>
+
+    <section class="workspace" aria-label="Анализ файла">
+      <article class="upload-card">
+        <div class="card-heading">
+          <div>
+            <p class="step-label">Шаг 01</p>
+            <h2>Выберите материал</h2>
+          </div>
+          <div class="mode-switch" role="tablist" aria-label="Тип файла">
+            <button class="mode-tab is-active" id="imageTab" type="button" role="tab" aria-selected="true" aria-controls="uploadPanel" data-mode="image">Изображение</button>
+            <button class="mode-tab" id="videoTab" type="button" role="tab" aria-selected="false" aria-controls="uploadPanel" data-mode="video">Видео</button>
+          </div>
+        </div>
+
+        <div id="uploadPanel" role="tabpanel" aria-labelledby="imageTab">
+          <input class="visually-hidden" id="fileInput" type="file" accept="image/jpeg,image/png,image/webp">
+          <div class="drop-zone" id="dropZone" aria-describedby="fileRules">
+            <div class="drop-icon" aria-hidden="true"><span></span></div>
+            <div class="drop-copy">
+              <strong id="dropTitle">Перетащите изображение сюда</strong>
+              <span>или</span>
+              <button class="text-button" id="chooseButton" type="button">выберите файл</button>
+            </div>
+            <p id="fileRules">JPEG, PNG или WebP · до {{ max_image_mb }} МБ · до 40 Мп</p>
+          </div>
+
+          <div class="file-preview" id="filePreview" hidden>
+            <div class="preview-media" id="previewMedia"></div>
+            <div class="preview-info">
+              <span class="state-chip" id="stateChip"><i></i>Файл выбран</span>
+              <strong id="fileName"></strong>
+              <span id="fileMeta"></span>
+            </div>
+          </div>
+
+          <div class="inline-error" id="errorBox" role="alert" hidden>
+            <span aria-hidden="true">!</span>
+            <p id="errorText"></p>
+          </div>
+
+          <div class="action-row">
+            <button class="primary-button" id="analyzeButton" type="button" disabled>
+              <span id="analyzeButtonText">Запустить анализ</span>
+              <span class="button-arrow" aria-hidden="true">↗</span>
+            </button>
+            <button class="secondary-button" id="resetButton" type="button" hidden>Новый анализ</button>
+            <span class="status-text" id="statusText" aria-live="polite">Выберите файл, чтобы начать</span>
+          </div>
+        </div>
+      </article>
+
+      <aside class="model-card" aria-labelledby="modelCardTitle">
+        <div class="model-card-top">
+          <p class="step-label">Модель</p>
+          <span class="live-badge">готова</span>
+        </div>
+        <h2 id="modelCardTitle">EfficientNet‑B0</h2>
+        <p>Классификатор отдельных кадров. Порядок 14 классов читается непосредственно из checkpoint.</p>
+        <dl class="model-stats">
+          <div>
+            <dt>Macro‑F1</dt>
+            <dd id="macroF1">—</dd>
+            <small>основная validation‑метрика</small>
+          </div>
+          <div>
+            <dt>Эпоха</dt>
+            <dd id="checkpointEpoch">—</dd>
+            <small>лучший checkpoint</small>
+          </div>
+        </dl>
+        <details class="model-details" id="modelDetails">
+          <summary>Подробные метрики <span>14 классов</span></summary>
+          <div class="metrics-note">Оценка на независимых validation‑видео. Нулевые значения показаны без скрытия.</div>
+          <div class="metrics-scroll">
+            <table class="metrics-table">
+              <thead><tr><th>Класс</th><th>P</th><th>R</th><th>F1</th><th>n</th></tr></thead>
+              <tbody id="metricsBody"></tbody>
+            </table>
+          </div>
+          <p class="accuracy-note" id="accuracyNote"></p>
+        </details>
+      </aside>
+    </section>
+
+    <section class="result-section" id="resultSection" aria-labelledby="resultTitle" hidden>
+      <div class="section-heading">
+        <div>
+          <p class="step-label">Шаг 02</p>
+          <h2 id="resultTitle">Результат модели</h2>
+        </div>
+        <div class="result-runtime">
+          <span id="resultDevice">—</span>
+          <span class="divider" aria-hidden="true"></span>
+          <span id="resultTime">—</span>
+        </div>
+      </div>
+
+      <div class="result-grid">
+        <article class="primary-result">
+          <span class="result-kicker">Наивысшая оценка</span>
+          <h3 id="mainResultName">—</h3>
+          <div class="result-taxonomy">
+            <span id="mainResultCategory">—</span>
+            <code id="mainResultKey">—</code>
+          </div>
+          <div class="score-lockup">
+            <strong id="mainResultScore">—</strong>
+            <span>оценка модели</span>
+          </div>
+          <p class="result-caveat">Softmax‑оценка не является откалиброванной клинической вероятностью.</p>
+        </article>
+
+        <article class="ranking-card">
+          <div class="ranking-heading">
+            <h3>Три ведущих класса</h3>
+            <span>softmax</span>
+          </div>
+          <div id="topBars" class="score-bars"></div>
+          <details class="all-scores">
+            <summary>Все 14 оценок</summary>
+            <div id="allScores" class="all-scores-list"></div>
+          </details>
+        </article>
+      </div>
+
+      <div class="video-results" id="videoResults" hidden>
+        <div class="video-summary">
+          <div><span>Длительность</span><strong id="videoDuration">—</strong></div>
+          <div><span>Выбрано кадров</span><strong id="videoFrameCount">—</strong></div>
+          <div><span>Частота анализа</span><strong>{{ sample_fps }} кадр/с</strong></div>
+        </div>
+
+        <article class="timeline-card">
+          <div class="timeline-heading">
+            <div><p class="step-label">Покадровый результат</p><h3>Лента времени</h3></div>
+            <label class="filter-label" for="classFilter">Показать класс
+              <select id="classFilter"><option value="all">Все классы</option></select>
+            </label>
+          </div>
+          <div class="timeline-scroll">
+            <table class="timeline-table">
+              <thead><tr><th>Время</th><th>Результат</th><th>Категория</th><th>Оценка модели</th></tr></thead>
+              <tbody id="timelineBody"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="gallery-card" id="galleryCard" hidden>
+          <div class="gallery-heading"><h3>Ключевые кадры</h3><span>не более 12 превью</span></div>
+          <div class="frame-gallery" id="frameGallery"></div>
+        </article>
+      </div>
+
+      <div class="limitations" role="note">
+        <strong>Как читать результат</strong>
+        <ul>
+          <li>Модель анализирует отдельные кадры и не учитывает контекст соседних кадров.</li>
+          <li>Softmax‑оценка не равна вероятности диагноза; некоторые классы распознаются заметно хуже других.</li>
+          <li>Файлы обрабатываются локально в памяти или во временном каталоге и не сохраняются.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="method-strip" aria-label="Принцип работы">
+      <div><span>01</span><strong>Файл</strong><small>проверка формата и лимитов</small></div>
+      <i aria-hidden="true"></i>
+      <div><span>02</span><strong>Кадр 224 × 224</strong><small>validation‑preprocessing</small></div>
+      <i aria-hidden="true"></i>
+      <div><span>03</span><strong>14 оценок</strong><small>без temporal‑сглаживания</small></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Локальный MVP · без телеметрии · без сохранения медицинских файлов</p>
+    <p>Только для исследовательской демонстрации</p>
+  </footer>
+
+  <script src="{{ url_for('static', path='/app.js') }}" defer></script>
+</body>
+</html>

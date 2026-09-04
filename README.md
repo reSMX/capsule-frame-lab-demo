@@ -1,0 +1,117 @@
+# Capsule Frame Lab
+
+> **Статус: демонстрационная версия (MVP).** Только для исследовательской презентации и
+> технического тестирования; результаты не являются диагнозом.
+
+Локальный веб‑MVP для демонстрации 14‑классовой EfficientNet‑B0 на отдельных кадрах и коротких
+MP4 капсульной эндоскопии. Это исследовательский прототип, а не диагностическое изделие.
+
+Приложение не обращается к датасетам и внешним сервисам: для inference нужны только checkpoint
+`best.pt` и лежащий рядом validation‑отчёт `report.json`. Загруженные изображения остаются в
+памяти, а временный MP4 гарантированно удаляется после запроса.
+
+## Быстрый запуск в PowerShell
+
+В этой рабочей папке checkpoint и обучающее окружение не дублируются. Скрипт запуска автоматически
+находит их в соседнем проекте `..\fgds`. Сначала один раз установите веб‑зависимости в уже
+настроенное окружение модели:
+
+```powershell
+& '..\fgds\.venv-win\Scripts\python.exe' -m pip install -r requirements-web.txt
+```
+
+Затем запускайте сайт одной командой:
+
+```powershell
+.\start-web.ps1
+```
+
+Откройте `http://127.0.0.1:8000`. Сервер намеренно слушает только loopback‑адрес и использует один
+процесс, чтобы не создавать несколько копий модели в VRAM.
+
+Если checkpoint и `.venv-win` находятся прямо в этой папке, можно запускать стандартно:
+
+```powershell
+.\.venv-win\Scripts\python.exe -m pip install -r requirements-web.txt
+.\.venv-win\Scripts\python.exe -m uvicorn web_demo.app:app --host 127.0.0.1 --port 8000
+```
+
+## Конфигурация
+
+Переменные задаются перед запуском, например `$env:DEVICE = 'cpu'`.
+
+| Переменная | По умолчанию | Назначение |
+|---|---:|---|
+| `MODEL_PATH` | `runs/combined_galar_v1/best.pt` | путь к checkpoint |
+| `REPORT_PATH` | `report.json` рядом с checkpoint | validation‑метрики |
+| `DEVICE` | `auto` | `auto`, `cuda` или `cpu` |
+| `MAX_IMAGE_MB` | `15` | максимальный размер изображения |
+| `MAX_IMAGE_MEGAPIXELS` | `40` | лимит декодированных пикселей |
+| `MAX_VIDEO_MB` | `300` | максимальный размер MP4 |
+| `MAX_VIDEO_SECONDS` | `120` | максимальная длительность MP4 |
+| `VIDEO_SAMPLE_FPS` | `1` | частота равномерной выборки кадров |
+| `MAX_VIDEO_FRAMES` | `120` | максимум анализируемых кадров |
+| `INFERENCE_BATCH_SIZE` | `16` | размер батча для видео |
+| `MAX_PREVIEW_FRAMES` | `12` | число возвращаемых JPEG‑превью, не больше 12 |
+
+`DEVICE=auto` выбирает CUDA при доступности и иначе безопасно использует CPU. `DEVICE=cuda`
+завершит запуск с понятной ошибкой, если CUDA недоступна.
+
+## API
+
+- `GET /api/health` — готовность, фактическое устройство, CUDA и эпоха checkpoint.
+- `GET /api/model` — архитектура, macro‑F1, классы и честные per‑class метрики из `report.json`.
+- `POST /api/predict-image` — JPEG, PNG или WebP как multipart‑поле `file`.
+- `POST /api/predict-video` — короткий MP4 как multipart‑поле `file`.
+
+Видео анализируется как набор отдельных равномерно выбранных кадров. Temporal‑модель, скрытое
+сглаживание и объединение кадров в клинические события не применяются.
+
+## Проверка
+
+Полный набор тестов, включая реальный CPU inference checkpoint и MP4 endpoint:
+
+```powershell
+$env:MODEL_PATH = (Resolve-Path '..\fgds\runs\combined_galar_v1\best.pt').Path
+& '..\fgds\.venv-win\Scripts\python.exe' -m pytest web_demo\tests -q
+```
+
+Ручная проверка CPU:
+
+```powershell
+$env:DEVICE = 'cpu'
+.\start-web.ps1
+```
+
+Проверка CUDA:
+
+```powershell
+$env:DEVICE = 'cuda'
+.\start-web.ps1
+```
+
+Для воспроизводимого smoke test без пользовательских медицинских файлов:
+
+```powershell
+& '..\fgds\.venv-win\Scripts\python.exe' -m web_demo.tests.smoke_real --model '..\fgds\runs\combined_galar_v1\best.pt' --device cpu
+& '..\fgds\.venv-win\Scripts\python.exe' -m web_demo.tests.smoke_real --model '..\fgds\runs\combined_galar_v1\best.pt' --device cuda
+```
+
+## Типичные ошибки
+
+- **Checkpoint не найден.** Укажите полный проверенный путь в `MODEL_PATH` или положите файл в
+  `runs\combined_galar_v1\best.pt`.
+- **CUDA недоступна.** Используйте `DEVICE=auto` или `DEVICE=cpu`; проверьте отдельно совместимость
+  установленного PyTorch и драйвера.
+- **MP4 не читается.** Контейнер может быть MP4, но его кодек может отсутствовать в сборке OpenCV.
+  Перекодируйте ролик в H.264/MP4 или MPEG‑4/MP4.
+- **Файл отклонён.** Проверьте лимиты размера, длительности и пикселей; их фактические значения
+  всегда показаны рядом с областью загрузки.
+
+## Ограничения модели
+
+Checkpoint выбран на эпохе 3 по macro‑F1 `0.29618118078579847` на video‑level validation. Общая
+accuracy `0.8096690136940733` заметно зависит от дисбаланса классов и поэтому не подаётся как
+главный показатель. Модель оценивает отдельные кадры, softmax не откалиброван как клиническая
+вероятность, а некоторые классы имеют очень низкие или нулевые validation‑метрики. Интерфейс
+показывает эти значения без скрытия.
