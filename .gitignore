@@ -1,10 +1,56 @@
+# Python and test artifacts
 __pycache__/
-.pytest_cache/
 *.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.egg-info/
+build/
+dist/
+
+# Local environments and secrets (keep the documented example)
 .venv*/
+venv/
+env/
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Model weights, training outputs and datasets
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.safetensors
+/runs/
+/data/
+/datasets/
+
+# User media and runtime files
 *.mp4
 *.avi
 *.mov
+*.mkv
 uploads/
 tmp/
+*.log
+*.sqlite
+*.sqlite3
+
+# Editor and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Superseded local sketches and Figma planning; not part of v1
+/plane/
+/planes/
+/design/
